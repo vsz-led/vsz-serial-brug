@@ -8,6 +8,7 @@ import (
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
 	"log"
+	"strings"
 	"time"
 )
 
@@ -118,6 +119,7 @@ func main() {
 
 	// Create buffer for reading serial with size 100
 	buff := make([]byte, 100)
+	buffer := ""
 
 	for {
 		// Read from serial into buffer
@@ -137,5 +139,72 @@ func main() {
 
 		// Print received data
 		fmt.Print(data)
+
+		buffer += data
+		if strings.HasSuffix(buffer, "\n") {
+			parts := strings.Split(buffer, "_")
+			if strings.Contains(parts[1], "start") {
+				res, err := db.Exec("UPDATE Kruising SET laatst_opgestart=now() WHERE kruisingscode = ?", config.Kruisingscode)
+				if err != nil {
+					log.Printf("failed to write start datetime to databse: %s", err)
+				}
+
+				affected, err := res.RowsAffected()
+				if err != nil {
+					log.Printf("failed to get rows affected: %s", err)
+				}
+				log.Println(affected)
+
+				if affected != 1 {
+					log.Printf("%d rows were affected instead of 1", affected)
+				}
+			}
+			if strings.Contains(parts[1], "zuid") {
+				res, err := db.Exec("INSERT INTO Auto (datumtijd,richting,kruisingscode) values (now(), 'zuid', ?)", config.Kruisingscode)
+				if err != nil {
+					log.Printf("failed to write zuid event to databse: %s", err)
+				}
+
+				affected, err := res.RowsAffected()
+				if err != nil {
+					log.Printf("failed to get rows affected: %s", err)
+				}
+
+				if affected != 1 {
+					log.Printf("%d rows were affected instead of 1", affected)
+				}
+			}
+			if strings.Contains(parts[1], "west") {
+				res, err := db.Exec("INSERT INTO Auto (datumtijd,richting,kruisingscode) values (now(), 'west', ?)", config.Kruisingscode)
+				if err != nil {
+					log.Printf("failed to write west event to databse: %s", err)
+				}
+
+				affected, err := res.RowsAffected()
+				if err != nil {
+					log.Printf("failed to get rows affected: %s", err)
+				}
+
+				if affected != 1 {
+					log.Printf("%d rows were affected instead of 1", affected)
+				}
+			}
+			if strings.Contains(parts[1], "oost") {
+				res, err := db.Exec("INSERT INTO Auto (datumtijd,richting,kruisingscode) values (now(), 'oost', ?)", config.Kruisingscode)
+				if err != nil {
+					log.Printf("failed to write oost event to databse: %s", err)
+				}
+
+				affected, err := res.RowsAffected()
+				if err != nil {
+					log.Printf("failed to get rows affected: %s", err)
+				}
+
+				if affected != 1 {
+					log.Printf("%d rows were affected instead of 1", affected)
+				}
+			}
+			buffer = ""
+		}
 	}
 }
