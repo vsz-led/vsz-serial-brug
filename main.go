@@ -18,13 +18,13 @@ type config struct {
 		Pass string `yaml:"pass"`
 		DB   string `yaml:"db"`
 	}
+	Kruisingscode int
 }
 
-type opdrachtgever struct {
-	Bedrijfscode int
+type kruising struct {
+	Plaats       string
+	Weg          string
 	Bedrijfsnaam string
-	Email        string
-	Wachtwoord   string
 }
 
 const baudrate = 115200
@@ -84,19 +84,29 @@ func main() {
 	db.SetMaxOpenConns(10)
 	db.SetMaxIdleConns(10)
 
-	rows, err := db.Query("SELECT * FROM Opdrachtgever")
+	rows, err := db.Query("SELECT plaats,weg,bedrijfsnaam FROM Kruising JOIN Opdrachtgever ON Kruising.bedrijfscode=Opdrachtgever.bedrijfscode WHERE kruisingscode = ?", config.Kruisingscode)
 	if err != nil {
 		log.Printf("Failed to query: %s", err)
 		return
 	}
+
+	succes := false
 	for rows.Next() {
-		var opdrachtgever opdrachtgever
-		err = rows.Scan(&opdrachtgever.Bedrijfscode, &opdrachtgever.Bedrijfsnaam, &opdrachtgever.Email, &opdrachtgever.Wachtwoord)
+		var kruising kruising
+		err = rows.Scan(&kruising.Plaats, &kruising.Weg, &kruising.Bedrijfsnaam)
 		if err != nil {
-			log.Printf("Failed to scan quert: %s", err)
+			log.Printf("Failed to scan query: %s", err)
 			return
 		}
-		log.Println(opdrachtgever)
+
+		succes = true
+		log.Printf("Starting kruising %s in %s for opdrachtgever %s", kruising.Weg, kruising.Plaats, kruising.Bedrijfsnaam)
+	}
+
+	// Check if there was a row, if not shutdown
+	if !succes {
+		log.Printf("Failed to find kruising with code %d, shutting down", config.Kruisingscode)
+		return
 	}
 
 	// Open the serial port
